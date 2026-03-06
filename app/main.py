@@ -1,14 +1,44 @@
+import logging
+from contextlib import asynccontextmanager
+
+from alembic import command
+from alembic.config import Config
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.v1.router import router
 from app.core.config import settings
+from app.database.session import engine
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Apply database migrations on startup."""
+    try:
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("asyncmy", "pymysql"))
+        command.upgrade(alembic_cfg, "head")
+        logger.info(f"✓ Database migrations applied - {settings.PROJECT_NAME}")
+    except Exception as e:
+        logger.error(f"✗ Migration failed: {e}")
+        raise
+
+    yield
+
+    await engine.dispose()
+    logger.info("Database connection closed")
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description="E-commerce service for managing products and categories",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 app.include_router(router, prefix=settings.API_V1_STR)
@@ -36,3 +66,14 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": settings.PROJECT_NAME}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "app.main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.DEBUG
+    )

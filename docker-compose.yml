@@ -2,18 +2,17 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:16-alpine
+    image: mariadb:10.11
     container_name: e-bag-db
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-ecommerce_db}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-ecommerce_db}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-3306}:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,12 +21,10 @@ services:
     build: .
     container_name: e-bag-app
     environment:
-      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-ecommerce_db}
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DATABASE_URL: mariadb://root:${DB_PASSWORD}@db:3306/${DB_NAME:-ecommerce_db}
       DB_NAME: ${DB_NAME:-ecommerce_db}
       DB_HOST: db
-      DB_PORT: ${DB_PORT:-5432}
+      DB_PORT: ${DB_PORT:-3306}
       DATABASE_POOL_SIZE: 10
       DATABASE_MAX_OVERFLOW: 20
       DATABASE_POOL_RECYCLE: 3600
@@ -44,12 +41,10 @@ services:
     build: .
     container_name: e-bag-test
     environment:
-      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-ecommerce_test}
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DATABASE_URL: mariadb://root:${DB_PASSWORD}@db:3306/${DB_NAME:-ecommerce_test}
       DB_NAME: ${DB_NAME:-ecommerce_test}
       DB_HOST: db
-      DB_PORT: ${DB_PORT:-5432}
+      DB_PORT: ${DB_PORT:-3306}
     depends_on:
       db:
         condition: service_healthy
@@ -59,4 +54,4 @@ services:
     command: pytest tests/ -v
 
 volumes:
-  postgres_data:
+  db_data:

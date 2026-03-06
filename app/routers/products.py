@@ -1,7 +1,8 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
-from app.routers.deps import get_session
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.crud.cruds import (
     create_product,
     get_product,
@@ -9,6 +10,7 @@ from app.crud.cruds import (
     update_product,
     delete_product
 )
+from app.routers.deps import get_session
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 
 router = APIRouter()

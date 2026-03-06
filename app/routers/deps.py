@@ -1,7 +1,11 @@
+from typing import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
+
 from app.database.session import async_session_maker
 
-def get_session() -> AsyncSession:
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Dependency injection for database sessions."""
-    return async_session_maker
+    async with async_session_maker() as session:
+        yield session

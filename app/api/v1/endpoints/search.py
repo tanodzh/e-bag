@@ -1,9 +1,11 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
+
 from app.routers.deps import get_session
-from app.services.search_service import SearchService
 from app.schemas.product import SearchRequest, SearchResponse
+from app.services.search_service import SearchService
 
 router = APIRouter()
 

@@ -1,9 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.product import Product
+
 from app.models.category import Category
+from app.models.product import Product
+from app.schemas.product import SearchRequest
 from app.services.search_service import SearchService
-from app.schemas.product import ProductSearchResult, SearchRequest, SearchResponse
 
 
 @pytest.fixture
@@ -52,7 +53,7 @@ def sample_products():
         ),
         Product(
             title="Jeans",
-            description:"Denim jeans",
+            description="Denim jeans",
             sku="JNS-001",
             price=59.99,
             category_id=3
@@ -261,7 +262,7 @@ async def test_advanced_search(session: AsyncSession, sample_categories, sample_
 
 @pytest.mark.asyncio
 async def test_search_case_insensitive(session: AsyncSession, sample_categories, sample_products):
-    """Test search is case insensitive."""
+    """Test search is case-insensitive."""
     for category in sample_categories:
         session.add(category)
     for product in sample_products:

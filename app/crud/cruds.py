@@ -1,8 +1,9 @@
-from sqlalchemy import select, func, and_, or_
 from typing import Optional, List
-from datetime import datetime
-from app.models.product import Product
+
+from sqlalchemy import select
+
 from app.models.category import Category
+from app.models.product import Product
 
 
 async def create_product(

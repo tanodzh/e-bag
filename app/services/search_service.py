@@ -1,8 +1,10 @@
-from sqlalchemy import select, func, and_, or_
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
-from app.models.product import Product
+
+from sqlalchemy import select, func, or_, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.category import Category
+from app.models.product import Product
 from app.schemas.product import ProductSearchResult, SearchRequest, SearchResponse
 
 

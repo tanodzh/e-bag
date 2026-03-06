@@ -1,7 +1,8 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
-from app.routers.deps import get_session
+
 from app.crud.cruds import (
     create_category,
     get_category,
@@ -9,6 +10,7 @@ from app.crud.cruds import (
     update_category,
     delete_category
 )
+from app.routers.deps import get_session
 from app.schemas.category import (
     CategoryCreate,
     CategoryUpdate,
