@@ -25,10 +25,11 @@ async def lifespan(app: FastAPI):
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("asyncmy", "pymysql"))
         command.upgrade(alembic_cfg, "head")
-        logger.info(f"✓ Database migrations applied - {settings.PROJECT_NAME}")
     except Exception as e:
         logger.error(f"✗ Migration failed: {e}")
         raise
+
+    logger.info(f"✓ Database migrations applied - {settings.PROJECT_NAME}")
 
     yield
 

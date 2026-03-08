@@ -25,7 +25,7 @@ class ProductBase(BaseModel):
 
 class ProductCreate(ProductBase):
     """Schema for creating a product."""
-    pass
+    image: Optional[str] = Field(None, description="Base64 encoded image with data URI prefix (e.g. data:image/png;base64,...)")
 
 
 class ProductUpdate(BaseModel):

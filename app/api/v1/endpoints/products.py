@@ -1,54 +1,92 @@
+import base64
+import logging
 import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.database.session import get_session
 from app.services.product_service import ProductService
-from app.schemas.product import ProductUpdate, ProductResponse
+from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+_MEDIA_PREFIX = "/media/products/"
+_EXT_MAP = {"image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif", "image/webp": ".webp"}
+
+
+def _image_url_to_path(image_url: str) -> Optional[Path]:
+    """Resolve a stored image URL back to its path on disk, or None if not a local upload."""
+    idx = image_url.find(_MEDIA_PREFIX)
+    if idx == -1:
+        return None
+    return Path(settings.UPLOAD_DIR) / image_url[idx + len(_MEDIA_PREFIX):]
+
+
+def _save_base64_image(data: str) -> tuple[Path, str]:
+    """Decode a base64 data URI, save to disk, return (dest_path, image_url)."""
+    if not data.startswith("data:"):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Image must be a data URI (data:image/...;base64,...)")
+    try:
+        header, encoded = data.split(",", 1)
+        mime = header.split(":")[1].split(";")[0]
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Malformed image data URI")
+    if mime not in _ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=f"Unsupported image type '{mime}'. Allowed: {sorted(_ALLOWED_IMAGE_TYPES)}")
+    try:
+        image_bytes = base64.b64decode(encoded)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Invalid base64 image data")
+    filename = f"{uuid.uuid4().hex}{_EXT_MAP[mime]}"
+    dest = Path(settings.UPLOAD_DIR) / filename
+    dest.write_bytes(image_bytes)
+    return dest, f"{settings.BASE_URL}/media/products/{filename}"
 
 
 @router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product_endpoint(
-    title: str = Form(...),
-    sku: str = Form(...),
-    price: float = Form(...),
-    category_id: int = Form(...),
-    description: Optional[str] = Form(None),
-    image: Optional[UploadFile] = File(None),
+    product_data: ProductCreate,
     session: AsyncSession = Depends(get_session)
 ):
-    """Create a new product. Send as multipart/form-data; include 'image' field for file upload."""
+    """Create a new product. The 'image' field accepts a base64 data URI (data:image/png;base64,...)."""
+    logger.debug("Creating product: sku=%s title=%r category_id=%s price=%s",
+                 product_data.sku, product_data.title, product_data.category_id, product_data.price)
+
     image_url: Optional[str] = None
+    dest: Optional[Path] = None
 
-    if image is not None:
-        if image.content_type not in _ALLOWED_IMAGE_TYPES:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Unsupported image type '{image.content_type}'. Allowed: {sorted(_ALLOWED_IMAGE_TYPES)}"
-            )
-        suffix = Path(image.filename).suffix if image.filename else ""
-        filename = f"{uuid.uuid4().hex}{suffix}"
-        dest = Path(settings.UPLOAD_DIR) / filename
-        dest.write_bytes(await image.read())
-        image_url = f"{settings.BASE_URL}/media/products/{filename}"
+    if product_data.image is not None:
+        dest, image_url = _save_base64_image(product_data.image)
+        logger.debug("Image saved: url=%s", image_url)
 
-    return await ProductService.create_product(
-        session=session,
-        title=title,
-        description=description,
-        image=image_url,
-        sku=sku,
-        price=price,
-        category_id=category_id
-    )
+    try:
+        product = await ProductService.create_product(
+            session=session,
+            title=product_data.title,
+            description=product_data.description,
+            image=image_url,
+            sku=product_data.sku,
+            price=product_data.price,
+            category_id=product_data.category_id
+        )
+        logger.debug("Product created: id=%s sku=%s", product.id, product.sku)
+        return product
+    except Exception as exc:
+        if dest is not None:
+            dest.unlink(missing_ok=True)
+            logger.debug("Cleaned up orphaned image: %s", dest)
+        logger.error("Failed to create product sku=%r: %s", product_data.sku, str(exc).splitlines()[0])
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create product")
 
 
 @router.get("/", response_model=list[ProductResponse])
@@ -113,10 +151,21 @@ async def delete_product_endpoint(
     product_id: int,
     session: AsyncSession = Depends(get_session)
 ):
-    """Delete a product."""
-    success = await ProductService.delete_product(session=session, product_id=product_id)
-    if not success:
+    """Delete a product and its associated image file."""
+    logger.debug("Deleting product: id=%s", product_id)
+    product = await ProductService.get_product(session=session, product_id=product_id)
+    if product is None:
+        logger.debug("Product not found: id=%s", product_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found"
         )
+
+    image_path = _image_url_to_path(product.image) if product.image else None
+
+    await ProductService.delete_product(session=session, product_id=product_id)
+    logger.debug("Product deleted from DB: id=%s sku=%s", product_id, product.sku)
+
+    if image_path is not None:
+        image_path.unlink(missing_ok=True)
+        logger.debug("Deleted image file: %s", image_path)

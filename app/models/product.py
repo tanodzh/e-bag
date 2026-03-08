@@ -10,8 +10,8 @@ class Product(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False, index=True)
-    description = Column(Text)
-    image = Column(String(500))
+    description = Column(Text, nullable=False)
+    image = Column(String(500), nullable=False)
     sku = Column(String(50), unique=True, nullable=False, index=True)
     price = Column(Numeric(precision=10, scale=2), nullable=False, index=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False, index=True)
