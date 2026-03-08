@@ -1,7 +1,10 @@
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.database.session import get_session
 from app.services.category_service import CategoryService
@@ -66,12 +69,16 @@ async def update_category_endpoint(
     session: AsyncSession = Depends(get_session)
 ):
     """Update a category."""
-    category = await CategoryService.update_category(
-        session=session,
-        category_id=category_id,
-        name=category_data.name,
-        parent_id=category_data.parent_id
-    )
+    try:
+        category = await CategoryService.update_category(
+            session=session,
+            category_id=category_id,
+            name=category_data.name,
+            parent_id=category_data.parent_id
+        )
+    except ValueError as exc:
+        logger.warning("Category update rejected for id=%s: %s", category_id, exc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     if category is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -86,7 +93,11 @@ async def delete_category_endpoint(
     session: AsyncSession = Depends(get_session)
 ):
     """Delete a category."""
-    success = await CategoryService.delete_category(session=session, category_id=category_id)
+    try:
+        success = await CategoryService.delete_category(session=session, category_id=category_id)
+    except ValueError as exc:
+        logger.warning("Category delete rejected for id=%s: %s", category_id, exc)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
