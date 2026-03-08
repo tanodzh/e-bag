@@ -1,11 +1,16 @@
 from typing import Optional, List
 
 from sqlalchemy import select, func, or_, desc
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
 from app.models.category import Category
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse, ProductSearchResult
+
+
+def _product_query():
+    return select(Product).options(selectinload(Product.category))
 
 
 class ProductService:
@@ -32,14 +37,16 @@ class ProductService:
         )
         session.add(product)
         await session.commit()
-        await session.refresh(product)
-        return product
+        result = await session.execute(
+            _product_query().where(Product.id == product.id)
+        )
+        return result.scalar_one()
 
     @staticmethod
     async def get_product(session: AsyncSession, product_id: int) -> Optional[Product]:
         """Get a product by ID."""
         result = await session.execute(
-            select(Product).where(Product.id == product_id)
+            _product_query().where(Product.id == product_id)
         )
         return result.scalar_one_or_none()
 
@@ -51,13 +58,13 @@ class ProductService:
         category_id: Optional[int] = None
     ) -> List[Product]:
         """Get products with optional category filter and pagination."""
-        query = select(Product)
-        
+        query = _product_query()
+
         if category_id:
             query = query.where(Product.category_id == category_id)
-        
+
         query = query.offset(skip).limit(limit).order_by(Product.created_at.desc())
-        
+
         result = await session.execute(query)
         return list(result.scalars().all())
 
@@ -77,10 +84,10 @@ class ProductService:
             select(Product).where(Product.id == product_id)
         )
         product = result.scalar_one_or_none()
-        
+
         if product is None:
             return None
-        
+
         if title is not None:
             product.title = title
         if description is not None:
@@ -93,10 +100,12 @@ class ProductService:
             product.price = price
         if category_id is not None:
             product.category_id = category_id
-        
+
         await session.commit()
-        await session.refresh(product)
-        return product
+        result = await session.execute(
+            _product_query().where(Product.id == product_id)
+        )
+        return result.scalar_one()
 
     @staticmethod
     async def delete_product(session: AsyncSession, product_id: int) -> bool:

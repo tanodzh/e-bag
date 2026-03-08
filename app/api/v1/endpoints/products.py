@@ -128,16 +128,20 @@ async def update_product_endpoint(
     session: AsyncSession = Depends(get_session)
 ):
     """Update a product."""
-    product = await ProductService.update_product(
-        session=session,
-        product_id=product_id,
-        title=product_data.title,
-        description=product_data.description,
-        image=product_data.image,
-        sku=product_data.sku,
-        price=product_data.price,
-        category_id=product_data.category_id
-    )
+    try:
+        product = await ProductService.update_product(
+            session=session,
+            product_id=product_id,
+            title=product_data.title,
+            description=product_data.description,
+            image=product_data.image,
+            sku=product_data.sku,
+            price=product_data.price,
+            category_id=product_data.category_id
+        )
+    except Exception as exc:
+        logger.error("Failed to update product id=%s: %s", product_id, str(exc).splitlines()[0])
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update product")
     if product is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
