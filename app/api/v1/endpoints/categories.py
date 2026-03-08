@@ -3,14 +3,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.cruds import (
-    create_category,
-    get_category,
-    get_categories,
-    update_category,
-    delete_category
-)
-from app.routers.deps import get_session
+from app.database.session import get_session
+from app.services.category_service import CategoryService
 from app.schemas.category import (
     CategoryCreate,
     CategoryUpdate,
@@ -26,7 +20,7 @@ async def create_category_endpoint(
     session: AsyncSession = Depends(get_session)
 ):
     """Create a new category."""
-    return await create_category(
+    return await CategoryService.create_category(
         session=session,
         name=category_data.name,
         parent_id=category_data.parent_id
@@ -41,7 +35,7 @@ async def list_categories(
     session: AsyncSession = Depends(get_session)
 ):
     """Get a list of categories with pagination and parent filter."""
-    categories = await get_categories(
+    categories = await CategoryService.get_categories(
         session=session,
         skip=skip,
         limit=limit,
@@ -56,7 +50,7 @@ async def get_category_endpoint(
     session: AsyncSession = Depends(get_session)
 ):
     """Get a specific category by ID."""
-    category = await get_category(session=session, category_id=category_id)
+    category = await CategoryService.get_category(session=session, category_id=category_id)
     if category is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -72,7 +66,7 @@ async def update_category_endpoint(
     session: AsyncSession = Depends(get_session)
 ):
     """Update a category."""
-    category = await update_category(
+    category = await CategoryService.update_category(
         session=session,
         category_id=category_id,
         name=category_data.name,
@@ -92,7 +86,7 @@ async def delete_category_endpoint(
     session: AsyncSession = Depends(get_session)
 ):
     """Delete a category."""
-    success = await delete_category(session=session, category_id=category_id)
+    success = await CategoryService.delete_category(session=session, category_id=category_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

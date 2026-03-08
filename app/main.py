@@ -1,11 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import router
 from app.core.config import settings
@@ -17,6 +19,8 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Apply database migrations on startup."""
+    Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+
     try:
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("asyncmy", "pymysql"))
@@ -42,6 +46,7 @@ app = FastAPI(
 )
 
 app.include_router(router, prefix=settings.API_V1_STR)
+app.mount("/media", StaticFiles(directory="media", check_dir=False), name="media")
 
 app.add_middleware(
     CORSMiddleware,

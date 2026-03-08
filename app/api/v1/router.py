@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints.search import router as search_router
-from app.routers.categories import router as categories_router
-from app.routers.products import router as products_router
+from app.api.v1.endpoints.categories import router as categories_router
+from app.api.v1.endpoints.products import router as products_router
 
 router = APIRouter()
 

@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     DB_HOST: str = Field(default="db", min_length=1)
     DB_PORT: int = Field(default=3306, gt=0)
 
+    UPLOAD_DIR: str = "media/products"
+    BASE_URL: str = "http://localhost:8000"
+
     @property
     def DATABASE_URL(self) -> str:
         # Handle password: if empty, use empty string

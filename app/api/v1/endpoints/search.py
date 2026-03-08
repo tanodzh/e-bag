@@ -3,9 +3,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.routers.deps import get_session
+from app.database.session import get_session
+from app.services.product_service import ProductService
 from app.schemas.product import SearchRequest, SearchResponse
-from app.services.search_service import SearchService
 
 router = APIRouter()
 
@@ -30,7 +30,7 @@ async def search_products(
     - `limit`: Maximum number of results (default: 100, max: 1000)
     - `offset`: Pagination offset
     """
-    search_params = SearchRequest(
+    search_params = SearchParams(
         q=q,
         min_price=min_price,
         max_price=max_price,
@@ -39,4 +39,4 @@ async def search_products(
         offset=offset
     )
     
-    return await SearchService.search_products(session, search_params)
+    return await ProductService.search_products(session, search_params)
