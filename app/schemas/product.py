@@ -1,16 +1,15 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ProductCategory(BaseModel):
     """Schema for product category association."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
-
-    class Config:
-        from_attributes = True
 
 
 class ProductBase(BaseModel):
@@ -40,6 +39,8 @@ class ProductUpdate(BaseModel):
 
 class ProductResponse(BaseModel):
     """Schema for product response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     description: Optional[str]
@@ -51,12 +52,11 @@ class ProductResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class ProductSearchResult(BaseModel):
     """Schema for search result."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     description: Optional[str]
@@ -67,9 +67,6 @@ class ProductSearchResult(BaseModel):
     category_name: Optional[str]
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class SearchRequest(BaseModel):
@@ -91,10 +88,9 @@ class SearchRequest(BaseModel):
 
 class SearchResponse(BaseModel):
     """Schema for search response."""
+    model_config = ConfigDict(from_attributes=True)
+
     products: List[ProductSearchResult]
     total: int
     limit: int
     offset: int
-
-    class Config:
-        from_attributes = True

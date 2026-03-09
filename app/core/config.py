@@ -1,8 +1,10 @@
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=True)
+
     PROJECT_NAME: str = "E-Bag E-commerce Service"
     VERSION: str = "1.0.0"
     DEBUG: bool = False
@@ -24,11 +26,6 @@ class Settings(BaseSettings):
         # Handle password: if empty, use empty string
         password_part = f":{self.DB_PASSWORD}" if self.DB_PASSWORD else ""
         return f"mariadb+asyncmy://{self.DB_USERNAME}{password_part}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
-        case_sensitive = True
 
 
 settings = Settings()
