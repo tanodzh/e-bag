@@ -10,7 +10,7 @@ from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse, P
 
 
 def _product_query():
-    return select(Product).options(selectinload(Product.category))
+    return select(Product).options(selectinload(Product.category)).execution_options(populate_existing=True)
 
 
 class ProductService:

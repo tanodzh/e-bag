@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ProductCategory(BaseModel):
@@ -74,12 +74,19 @@ class ProductSearchResult(BaseModel):
 
 class SearchRequest(BaseModel):
     """Schema for search request parameters."""
-    q: Optional[str] = Field(None, description="Search query for title or SKU")
+    name: Optional[str] = Field(None, description="Search by product title (ilike)")
+    sku: Optional[str] = Field(None, description="Search by SKU (ilike)")
     min_price: Optional[float] = Field(None, description="Minimum price filter", gt=0)
     max_price: Optional[float] = Field(None, description="Maximum price filter", gt=0)
     category_id: Optional[int] = Field(None, description="Category filter")
-    limit: Optional[int] = Field(100, ge=1, le=1000, description="Max results to return")
-    offset: Optional[int] = Field(0, ge=0, description="Pagination offset")
+    limit: int = Field(100, ge=1, le=1000, description="Max results to return")
+    offset: int = Field(0, ge=0, description="Pagination offset")
+
+    @model_validator(mode="after")
+    def validate_combinations(self) -> "SearchRequest":
+        if self.name and self.sku:
+            raise ValueError("name and sku are mutually exclusive")
+        return self
 
 
 class SearchResponse(BaseModel):

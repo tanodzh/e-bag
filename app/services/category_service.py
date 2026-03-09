@@ -9,7 +9,7 @@ from app.models.product import Product
 
 
 def _category_query():
-    return select(Category).options(selectinload(Category.children))
+    return select(Category).options(selectinload(Category.children)).execution_options(populate_existing=True)
 
 
 async def _check_cycle(session: AsyncSession, category_id: int, new_parent_id: int) -> None:
