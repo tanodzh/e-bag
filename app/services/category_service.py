@@ -34,6 +34,11 @@ class CategoryService:
         parent_id: Optional[int] = None
     ) -> Category:
         """Create a new category."""
+        if parent_id is not None:
+            exists = await session.scalar(select(Category.id).where(Category.id == parent_id))
+            if exists is None:
+                raise ValueError(f"Parent category {parent_id} not found")
+
         category = Category(name=name, parent_id=parent_id)
         session.add(category)
         await session.commit()
@@ -87,6 +92,9 @@ class CategoryService:
         if name is not None:
             category.name = name
         if parent_id is not None:
+            parent_exists = await session.scalar(select(Category.id).where(Category.id == parent_id))
+            if parent_exists is None:
+                raise ValueError(f"Parent category {parent_id} not found")
             await _check_cycle(session, category_id, parent_id)
             category.parent_id = parent_id
 

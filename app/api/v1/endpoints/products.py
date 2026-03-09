@@ -32,21 +32,22 @@ def _save_base64_image(data: str) -> tuple[Path, str]:
     """Decode a base64 data URI, save to disk, return (dest_path, image_url)."""
     if not data.startswith("data:"):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="Image must be a data URI (data:image/...;base64,...)")
+                            detail="Invalid image data")
     try:
         header, encoded = data.split(",", 1)
         mime = header.split(":")[1].split(";")[0]
     except (ValueError, IndexError):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="Malformed image data URI")
+                            detail="Invalid image data")
     if mime not in _ALLOWED_IMAGE_TYPES:
+        logger.warning("Rejected unsupported image MIME type: %s", mime)
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=f"Unsupported image type '{mime}'. Allowed: {sorted(_ALLOWED_IMAGE_TYPES)}")
+                            detail="Invalid image data")
     try:
         image_bytes = base64.b64decode(encoded)
     except Exception:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="Invalid base64 image data")
+                            detail="Invalid image data")
     filename = f"{uuid.uuid4().hex}{_EXT_MAP[mime]}"
     dest = Path(settings.UPLOAD_DIR) / filename
     dest.write_bytes(image_bytes)

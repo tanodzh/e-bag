@@ -23,11 +23,16 @@ async def create_category_endpoint(
     session: AsyncSession = Depends(get_session)
 ):
     """Create a new category."""
-    return await CategoryService.create_category(
-        session=session,
-        name=category_data.name,
-        parent_id=category_data.parent_id
-    )
+    try:
+        return await CategoryService.create_category(
+            session=session,
+            name=category_data.name,
+            parent_id=category_data.parent_id
+        )
+    except ValueError as exc:
+        logger.error("Category create rejected: %s", exc, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Error creating category, check log files for details")
 
 
 @router.get("/", response_model=list[CategoryResponse])
@@ -77,8 +82,9 @@ async def update_category_endpoint(
             parent_id=category_data.parent_id
         )
     except ValueError as exc:
-        logger.warning("Category update rejected for id=%s: %s", category_id, exc)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        logger.error("Category update rejected for id=%s: %s", category_id, exc, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Error updating category, check log files for details")
     if category is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -96,8 +102,9 @@ async def delete_category_endpoint(
     try:
         success = await CategoryService.delete_category(session=session, category_id=category_id)
     except ValueError as exc:
-        logger.warning("Category delete rejected for id=%s: %s", category_id, exc)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        logger.error("Category delete rejected for id=%s: %s", category_id, exc, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Error deleting category, check log files for details")
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
